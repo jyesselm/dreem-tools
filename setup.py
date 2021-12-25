@@ -37,7 +37,7 @@ setup(
     ],
     package_dir={'dreem_tools': 'dreem_tools'},
     py_modules=[
-        'dreem_tools/dreem_tools'
+        'dreem_tools/run'
         'dreem_tools/process',
         'dreem_tools/logger'
     ],
@@ -53,7 +53,7 @@ setup(
     ],
     entry_points = {
         'console_scripts' : [
-            'dreem-tools = dreem_tools.dreem_tools : cli',
+            'dreem-tools = dreem_tools.run : cli',
         ]
     }
 )
