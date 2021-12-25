@@ -178,12 +178,16 @@ def load(pathname):
 @click.option('-o', '--output', default='output.p')
 def merge(pickle_files, output):
     log.info(f'{len(pickle_files)} pickle files supplied')
-    pickle_datas = []
+    merged_mh = None
     for pf in pickle_files:
-        pickle_datas.append(load(pf))
-    dm = bit_vector.merge_all_mutational_histogram_dicts(pickle_datas)
+        if merged_mh is None:
+            merged_mh = load(pf)
+            continue
+        mh = load(pf)
+        log.info(pf)
+        bit_vector.merge_mutational_histogram_dicts(merged_mh, mh)
     log.info(f'writing merged file: {output}')
-    pickle.dump(dm, open(output, "wb"))
+    pickle.dump(merged_mh, open(output, "wb"))
 
 
 if __name__ == "__main__":
