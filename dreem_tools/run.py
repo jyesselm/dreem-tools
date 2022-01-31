@@ -109,7 +109,7 @@ def runmulti(csv, data_dir, seq_path):
         fq2 = f"{data_dir}/{barcode_seq}/test_S1_L001_R1_001.fastq"
         fa = f"{seq_path}/fastas/{code}.fasta"
         db = f"{seq_path}/rna/{code}.csv"
-        cmd = f"dreem -fa {fa} -fq1 {fq1} -fq2 {fq2} --dot_bracket {db} "
+        cmd = f"dreem -fa {fa} -fq1 {fq1} -fq2 {fq2} --dot_bracket {db} --plot_sequence "
         if row['align_type'] == "NORM":
             cmd += '--map_score_cutoff 15 '
         elif row['align_type'] == 'SHAPEMAPPER':
@@ -146,7 +146,7 @@ def runmulti(csv, data_dir, seq_path):
     df_sum_final = pd.concat(dfs)
     df_sum_final.to_csv("../analysis/summary.csv", index=False)
     df_sum_final["data"] = [[round(float(x), 5) for x in d.split(";")] for d in df_sum_final["data"]]
-    json.dump(df_sum_final.to_dict(), open(f"../analysis/summary.json", 'w'))
+    df_sum_final.to_json(f"../analysis/summary.json", orient="records")
 
 
 @cli.command()
