@@ -47,8 +47,8 @@ def test_get_hairpin_extend():
     df = get_test_dataframe()
     me = dataframe.MotifExtraction()
     df_m = me.get_hairpin(df, "CGAGUAG", bp=2)
-    assert df_m.loc[0]["m_sequence"] == "CCCGAGUAGGG"
-    assert df_m.loc[0]["m_structure"] == "(((.....)))"
+    assert df_m.loc[0]["hp_sequence"] == "CCCGAGUAGGG"
+    assert df_m.loc[0]["hp_structure"] == "(((.....)))"
     assert len(df_m) == len(df)
 
 
@@ -72,7 +72,7 @@ def test_get_twoways():
     df_m = me.get_twoways(df)
     df_m = df_m[df_m["name"] == "01_seq_4787"]
     # should have 3 junctions, tetraloop-loop receptor and two ires
-    assert list(df_m["m_sequence"]) == [
+    assert list(df_m["junc_sequence"]) == [
         "UAUG&CUAAG",
         "GAACUAC&GC",
         "GC&GAACUAC",

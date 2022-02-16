@@ -43,7 +43,12 @@ class MotifExtraction(object):
     def __get_motifs(
         self, row, mtype=None, sequence=None, min_pos=0, max_pos=999
     ):
-        s = rl.SecStruct(row["structure"], row["sequence"].replace("T", "U"))
+        try:
+            s = rl.SecStruct(
+                row["structure"], row["sequence"].replace("T", "U")
+            )
+        except:
+            return []
         motifs = []
         for e in s:
             if mtype is not None and e.type() != mtype:
@@ -107,7 +112,10 @@ class MotifExtraction(object):
     ):
         df_cols = "name,reads,aligned,sn,rna_name,dir,code".split(",")
         df_m_cols = (
-            df_cols + "m_name,m_sequence,m_structure,m_ind,m_data".split(",")
+            df_cols
+            + f"{name}_name,{name}_sequence,{name}_structure,{name}_ind,{name}_data".split(
+                ","
+            )
         )
         all_data = []
         for i, row in df.iterrows():
@@ -148,7 +156,7 @@ class MotifExtraction(object):
         self,
         df: pd.DataFrame,
         sequence: str,
-        name: str = "junction",
+        name: str = "junc",
         bp: int = 0,
         min_pos: int = 0,
         max_pos: int = 999,
@@ -160,7 +168,7 @@ class MotifExtraction(object):
     def get_twoways(
         self,
         df: pd.DataFrame,
-        name: str = "junction",
+        name: str = "junc",
         bp: int = 0,
         min_pos: int = 0,
         max_pos: int = 999,
@@ -173,7 +181,7 @@ class MotifExtraction(object):
         self,
         df: pd.DataFrame,
         sequence: str,
-        name: str = "motif",
+        name: str = "m",
         bp: int = 0,
         min_pos: int = 0,
         max_pos: int = 999,
@@ -185,7 +193,7 @@ class MotifExtraction(object):
     def get_motifs(
         self,
         df: pd.DataFrame,
-        name: str = "motif",
+        name: str = "m",
         bp: int = 0,
         min_pos: int = 0,
         max_pos: int = 999,
