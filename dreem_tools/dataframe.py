@@ -111,8 +111,12 @@ class MotifExtraction(object):
         max_pos=999,
     ):
         df_cols = "name,reads,aligned,sn,rna_name,dir,code".split(",")
+        df_cols_act = []
+        for col in df_cols:
+            if col in df:
+                df_cols_act.append(col)
         df_m_cols = (
-            df_cols
+            df_cols_act
             + f"{name}_name,{name}_sequence,{name}_structure,{name}_ind,{name}_data".split(
                 ","
             )
@@ -121,7 +125,7 @@ class MotifExtraction(object):
         for i, row in df.iterrows():
             motifs = self.__get_motifs(row, mtype, sequence, min_pos, max_pos)
             for m in motifs:
-                data = row[df_cols].tolist()
+                data = row[df_cols_act].tolist()
                 data.append(name)
                 data.extend(self.__get_data_from_motif(m, row, extend))
                 all_data.append(data)

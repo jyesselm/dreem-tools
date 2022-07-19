@@ -1,19 +1,22 @@
 import matplotlib.pyplot as plt
+import numpy as np
 import seaborn as sns
 
-def colors_for_sequence(seq : str):
+
+def colors_for_sequence(seq: str):
     colors = []
     for e in seq:
-        if e == 'A':
-            colors.append('red')
-        elif e == 'C':
-            colors.append('blue')
-        elif e == 'G':
-            colors.append('orange')
+        if e == "A":
+            colors.append("red")
+        elif e == "C":
+            colors.append("blue")
+        elif e == "G":
+            colors.append("orange")
         else:
-            colors.append('green')
+            colors.append("green")
     return colors
 
+# sub plots ###################################################################
 
 def plot_pop_avg(seq, ss, reactivities, ax=None):
     colors = colors_for_sequence(seq)
@@ -25,3 +28,19 @@ def plot_pop_avg(seq, ss, reactivities, ax=None):
     ax.set_xticklabels([f"{s}\n{nt}" for s, nt in zip(seq, ss)])
     return ax
 
+
+def plot_pop_avg_from_row(row, data_col="data", ax=None):
+    return plot_pop_avg(row["sequence"], row["structure"], row[data_col], ax)
+
+# full plots ###################################################################
+
+def plot_pop_avg_diff_from_rows(row1, row2, data_col="data"):
+    fig, axes = plt.subplots(3, 1)
+    plot_pop_avg_from_row(row1, data_col, axes[0])
+    plot_pop_avg_from_row(row2, data_col, axes[1])
+    diff = {
+        'sequence' : row1['sequence'],
+        'structure' : row1['structure'],
+        data_col : np.array(row1[data_col]) - np.array(row2[data_col])
+    }
+    plot_pop_avg_from_row(diff, data_col, axes[2])
