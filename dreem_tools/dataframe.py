@@ -205,3 +205,27 @@ class MotifExtraction(object):
         return self.__get_motif_dataframe(
             df, None, None, name, bp, min_pos, max_pos
         )
+
+
+def get_ref_hp_avg(df, min_pos=0, max_pos=999):
+    me = MotifExtraction()
+    df_ref = me.get_hairpin(
+        df, "CGAGUAG", name="ref_hp", min_pos=min_pos, max_pos=max_pos
+    )
+    return [(row[0][2] + row[0][5]) / 2 for row in df_ref["ref_hp_data"]]
+
+
+def get_gaaa_avg(df, min_pos=0, max_pos=999):
+    me = MotifExtraction()
+    df_gaaa = me.get_hairpin(
+        df, "GGAAAC", name="ttr_loop", min_pos=min_pos, max_pos=max_pos
+    )
+    return [
+        (row[0][2] + row[0][2] + row[0][3]) / 3
+        for row in df_gaaa["ttr_loop_data"]
+    ]
+
+def get_tlr_first_a(df, min_pos=0, max_pos=999):
+    me = MotifExtraction()
+    df_tltlr = me.get_twoway(df, "UAUG&CUAAG", name="tltlr")
+    return [row[0][1] for row in df_tltlr["tltlr_data"]]
