@@ -37,9 +37,12 @@ setup(
     ],
     package_dir={'dreem_tools': 'dreem_tools'},
     py_modules=[
-        'dreem_tools/run'
-        'dreem_tools/process',
+        'dreem_tools/dataframe',
         'dreem_tools/logger'
+        'dreem_tools/plotting',
+        'dreem_tools/process',
+        'dreem_tools/run',
+        'dreem_tools/util',
     ],
     include_package_data=True,
     install_requires=requirements,

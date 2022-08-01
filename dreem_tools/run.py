@@ -12,7 +12,6 @@ from tabulate import tabulate
 from dreem import bit_vector
 from dreem_tools import logger
 
-log = logger.setup_applevel_logger()
 
 
 def get_num(s):
@@ -90,31 +89,25 @@ def demultiplex(csv):
 @click.argument("data_dir")
 @click.argument("seq_path")
 def runmulti(csv, data_dir, seq_path):
-    if not os.path.isdir("processed"):
-        os.mkdir("processed")
-    if not os.path.isdir("analysis"):
-        os.mkdir("analysis")
+    log = logger.setup_applevel_logger()
+    os.makedirs("processed", exist_ok=True)
+    os.makedirs("analysis", exist_ok=True)
     df = pd.read_csv(csv)
     os.chdir("processed")
     dfs = []
     df_data = pd.DataFrame(columns="rna_name name code seq ss data".split())
     pos = 0
     for i, row in df.iterrows():
-        name, code, barcode_seq, type = (
-            row["name"],
-            row["code"],
-            row["barcode_seq"],
-            row["type"],
-        )
         dir_name = row["name"] + "_" + row["code"] + "_" + row["type"]
         if not os.path.isdir(dir_name):
             os.mkdir(dir_name)
         os.chdir(dir_name)
-        fq1 = f"{data_dir}/{barcode_seq}/test_S1_L001_R2_001.fastq"
-        fq2 = f"{data_dir}/{barcode_seq}/test_S1_L001_R1_001.fastq"
-        fa = f"{seq_path}/fastas/{code}.fasta"
-        db = f"{seq_path}/rna/{code}.csv"
+        fq1 = f"{data_dir}/{row['barcode_seq']}/test_S1_L001_R2_001.fastq"
+        fq2 = f"{data_dir}/{row['barcode_seq']}/test_S1_L001_R1_001.fastq"
+        fa = f"{seq_path}/fastas/{row['code']}.fasta"
+        db = f"{seq_path}/rna/{row['code']}.csv"
         cmd = f"dreem -fa {fa} -fq1 {fq1} -fq2 {fq2} --dot_bracket {db} --plot_sequence "
+        # only if included focing this was annoying!
         if "align_type" in row:
             if row["align_type"] == "NORM":
                 cmd += "--map_score_cutoff 15 "
@@ -130,18 +123,19 @@ def runmulti(csv, data_dir, seq_path):
             subprocess.call(cmd, shell=True)
         except:
             log.error("CMD did not run")
+            os.chdir("..")
             continue
         df_sum = pd.DataFrame()
         try:
             df_sum = pd.read_csv("output/BitVector_Files/summary.csv")
         except:
             os.chdir("..")
+        all_cols = list(df.columns)
+        all_cols.remove("name")
         df_sum["dir"] = dir_name
-        df_sum["code"] = code
-        df_sum["rna_name"] = name
-        df_sum["barcode"] = row["barcode"]
-        df_sum["barcode_seq"] = barcode_seq
-        df_sum["type"] = type
+        df_sum["rna_name"] = row['name']
+        for col in all_cols:
+            df_sum[col] = row[col]
         datas = []
         seqs = []
         sss = []
