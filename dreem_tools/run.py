@@ -5,9 +5,7 @@ import subprocess
 import shutil
 import os
 import re
-import json
 import pickle
-from tabulate import tabulate
 
 from dreem import bit_vector
 from dreem_tools import logger
@@ -188,6 +186,7 @@ def load(pathname):
 @click.argument("pickle_files", nargs=-1)
 @click.option("-o", "--output", default="output.p")
 def merge(pickle_files, output):
+    log = logger.setup_applevel_logger()
     log.info(f"{len(pickle_files)} pickle files supplied")
     merged_mh = None
     for pf in pickle_files:
