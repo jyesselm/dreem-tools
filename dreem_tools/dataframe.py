@@ -40,13 +40,9 @@ class MotifExtraction(object):
     def __init__(self):
         pass
 
-    def __get_motifs(
-        self, row, mtype=None, sequence=None, min_pos=0, max_pos=999
-    ):
+    def __get_motifs(self, row, mtype=None, sequence=None, min_pos=0, max_pos=999):
         try:
-            s = rl.SecStruct(
-                row["structure"], row["sequence"].replace("T", "U")
-            )
+            s = rl.SecStruct(row["structure"], row["sequence"].replace("T", "U"))
         except:
             return []
         motifs = []
@@ -77,9 +73,7 @@ class MotifExtraction(object):
                 if min_val - extend < 0:
                     raise ValueError("cannot extend motif it will go beyond 0")
                 if max_val + extend > len(data):
-                    raise ValueError(
-                        "cannot extend motif it will go beyond length"
-                    )
+                    raise ValueError("cannot extend motif it will go beyond length")
                 r1 = list(range(min_val - extend, min_val))
                 r2 = list(range(max_val + 1, max_val + extend + 1))
                 new_strands.append(r1 + s + r2)
@@ -202,9 +196,7 @@ class MotifExtraction(object):
         min_pos: int = 0,
         max_pos: int = 999,
     ):
-        return self.__get_motif_dataframe(
-            df, None, None, name, bp, min_pos, max_pos
-        )
+        return self.__get_motif_dataframe(df, None, None, name, bp, min_pos, max_pos)
 
 
 def get_ref_hp_avg(df, min_pos=0, max_pos=999):
@@ -220,10 +212,8 @@ def get_gaaa_avg(df, min_pos=0, max_pos=999):
     df_gaaa = me.get_hairpin(
         df, "GGAAAC", name="ttr_loop", min_pos=min_pos, max_pos=max_pos
     )
-    return [
-        (row[0][2] + row[0][2] + row[0][3]) / 3
-        for row in df_gaaa["ttr_loop_data"]
-    ]
+    return [(row[0][2] + row[0][2] + row[0][3]) / 3 for row in df_gaaa["ttr_loop_data"]]
+
 
 def get_tlr_first_a(df, min_pos=0, max_pos=999):
     me = MotifExtraction()

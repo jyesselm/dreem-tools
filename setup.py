@@ -42,7 +42,7 @@ setup(
         'dreem_tools/plotting',
         'dreem_tools/process',
         'dreem_tools/run',
-        'dreem_tools/util',
+        'dreem_tools/util'
     ],
     include_package_data=True,
     install_requires=requirements,

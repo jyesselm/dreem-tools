@@ -8,32 +8,7 @@ import re
 import pickle
 
 from dreem import bit_vector
-from dreem_tools import logger
-
-
-
-def get_num(s):
-    return float(re.findall(r"[-+]?\d*\.\d+|\d+", s)[0])
-
-
-def unique_sec(all_dirs):
-    org = all_dirs.pop(0)
-    spl1 = org.split("_")
-    diff_pos = []
-    diff = []
-    for d in all_dirs:
-        spl2 = d.split("_")
-        for i in range(0, len(spl1)):
-            if spl1[i] == spl2[i]:
-                continue
-            diff_pos.append(i)
-            diff.append(get_num(spl2[i]))
-    if len(diff_pos) != len(all_dirs):
-        print("cannot find unique section")
-        exit()
-    diff.insert(0, get_num(org.split("_")[diff_pos[0]]))
-    all_dirs.insert(0, org)
-    return diff
+from dreem_tools import logger, util
 
 
 def process_seq_csv(path):
@@ -42,6 +17,14 @@ def process_seq_csv(path):
     ss = "".join(list(df["struc"]))
     data = ";".join([str(x) for x in list(df["mismatches"])])
     return (seq, ss, data)
+
+
+def load(pathname):
+    """Safe loader for binary pickle files"""
+    fh = open(pathname, "rb")
+    data = pickle.load(fh)
+    fh.close()
+    return data
 
 
 @click.group()
@@ -71,8 +54,8 @@ def demultiplex(csv):
     shutil.move(r1_fastq, "test_S1_L001_R1_001.fastq")
     shutil.move(r2_fastq, "test_S1_L001_R2_001.fastq")
     subprocess.call(
-        "novobarcode -b rtb_barcodes.fa -f test_S1_L001_R1_001.fastq test_S1_L001_R2_001.fastq",
-        shell=True,
+            "novobarcode -b rtb_barcodes.fa -f test_S1_L001_R1_001.fastq test_S1_L001_R2_001.fastq",
+            shell=True,
     )
     if not os.path.isdir("NC"):
         print("nothing was generated STOPING NOW!")
@@ -86,100 +69,46 @@ def demultiplex(csv):
 @click.argument("csv")
 @click.argument("data_dir")
 @click.argument("seq_path")
-def runmulti(csv, data_dir, seq_path):
+@click.option("--move-plots", is_flag=True)
+def runmulti(csv, data_dir, seq_path, move_plots):
+    # TODO write infomation about the run here
     log = logger.setup_applevel_logger()
     os.makedirs("processed", exist_ok=True)
     os.makedirs("analysis", exist_ok=True)
     df = pd.read_csv(csv)
+    # catch old column naming scheme
+    if "name" in df:
+        df = df.rename({"name" : "construct"},  axis='columns')
+    if "type" in df:
+        df = df.rename({"type" : "data_type"},  axis='columns')
     os.chdir("processed")
+    if move_plots:
+        os.makedirs("plots", exist_ok=True)
     dfs = []
-    df_data = pd.DataFrame(columns="rna_name name code seq ss data".split())
-    pos = 0
     for i, row in df.iterrows():
-        dir_name = row["name"] + "_" + row["code"] + "_" + row["type"]
-        if not os.path.isdir(dir_name):
-            os.mkdir(dir_name)
+        print(row['construct'], row['code'], row['data_type'])
+        dir_name = row["construct"] + "_" + row["code"] + "_" + row["data_type"]
+        os.makedirs(dir_name, exist_ok=True)
         os.chdir(dir_name)
-        fq1 = f"{data_dir}/{row['barcode_seq']}/test_S1_L001_R2_001.fastq"
-        fq2 = f"{data_dir}/{row['barcode_seq']}/test_S1_L001_R1_001.fastq"
-        fa = f"{seq_path}/fastas/{row['code']}.fasta"
-        db = f"{seq_path}/rna/{row['code']}.csv"
-        cmd = f"dreem -fa {fa} -fq1 {fq1} -fq2 {fq2} --dot_bracket {db} --plot_sequence "
-        # only if included focing this was annoying!
-        if "align_type" in row:
-            if row["align_type"] == "NORM":
-                cmd += "--map_score_cutoff 15 "
-            elif row["align_type"] == "SHAPEMAPPER":
-                cmd += (
-                    '--map_score_cutoff 25 --bt2_alignment_args "--local;--no-unal;--no-mixed;--no-discordant;-i S,1,0.75;'
-                    '--rdg 5,1;--rfg 5,1;--ignore-quals;--dpad 30;--maxins 800;-R 10;-N 0;-D 15;-p 16"'
-                )
-        else:
-            cmd += "--map_score_cutoff 15"
-        print(cmd)
+        util.run_dreem_from_row(data_dir, seq_path, row)
+        mhs = None
         try:
-            subprocess.call(cmd, shell=True)
+            mhs = load("output/BitVector_Files/mutation_histos.p")
         except:
-            log.error("CMD did not run")
             os.chdir("..")
             continue
-        df_sum = pd.DataFrame()
-        try:
-            df_sum = pd.read_csv("output/BitVector_Files/summary.csv")
-        except:
-            os.chdir("..")
+        df_sum = util.mutation_histos_to_dataframe(mhs)
         all_cols = list(df.columns)
-        all_cols.remove("name")
+        all_cols.remove("construct")
         df_sum["dir"] = dir_name
-        df_sum["rna_name"] = row['name']
+        df_sum["rna_name"] = row["construct"]
         for col in all_cols:
             df_sum[col] = row[col]
-        datas = []
-        seqs = []
-        sss = []
-        for j, row2 in df_sum.iterrows():
-            path = f"output/BitVector_Files/{row2['name']}_*.csv"
-            seq, ss, data = process_seq_csv(glob.glob(path)[0])
-            datas.append(data)
-            seqs.append(seq)
-            sss.append(ss)
-            pos += 1
-        df_sum["sequence"] = seqs
-        df_sum["structure"] = sss
-        df_sum["data"] = datas
         dfs.append(df_sum)
         os.chdir("..")
     df_sum_final = pd.concat(dfs)
-    df_sum_final.to_csv("../analysis/summary.csv", index=False)
-    df_sum_final["data"] = [
-        [round(float(x), 5) for x in d.split(";")] for d in df_sum_final["data"]
-    ]
     df_sum_final.to_json(f"../analysis/summary.json", orient="records")
 
-
-@cli.command()
-@click.argument("data_path")
-def group(data_path):
-    # print("SUMMARY:\n" + tabulate(paired, ['condition', 'dir'], tablefmt="github"))
-    df = pd.read_csv(data_path)
-    for i, group in df.groupby(["code", "name"]):
-        cols = ["condition"]
-        secs = unique_sec(list(df["rna_name"]))
-        group["condition"] = secs
-        group = group.sort_values("condition")
-        for j, row in group.iterrows():
-            if len(cols) == 1:
-                nucs = list(row["seq"])
-
-            data = row["data"].split(";")
-
-
-def load(pathname):
-    """Safe loader for binary pickle files"""
-    fh = open(pathname, "rb")
-    data = pickle.load(fh)
-    fh.close()
-    return data
 
 
 @cli.command()

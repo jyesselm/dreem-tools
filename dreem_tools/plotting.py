@@ -43,9 +43,9 @@ def plot_pop_avg_diff_from_rows(row1, row2, data_col="data", **kwargs):
     plot_pop_avg_from_row(row1, data_col, axes[0])
     plot_pop_avg_from_row(row2, data_col, axes[1])
     diff = {
-        "sequence" : row1["sequence"],
+        "sequence": row1["sequence"],
         "structure": row1["structure"],
-        data_col   : np.array(row1[data_col]) - np.array(row2[data_col]),
+        data_col: np.array(row1[data_col]) - np.array(row2[data_col]),
     }
     plot_pop_avg_from_row(diff, data_col, axes[2])
     return fig
@@ -55,9 +55,9 @@ def plot_pop_avg_all(df, **kwargs):
     fig, axes = plt.subplots(len(df), 1, **kwargs)
     j = 0
     for i, row in df.iterrows():
-        colors = colors_for_sequence(row['sequence'])
-        axes[j].bar(range(0, len(row['data'])), row['data'], color=colors)
-        axes[j].set_title(row['rna_name'])
+        colors = colors_for_sequence(row["sequence"])
+        axes[j].bar(range(0, len(row["data"])), row["data"], color=colors)
+        axes[j].set_title(row["rna_name"])
         j += 1
     plot_pop_avg_from_row(df.iloc[-1], ax=axes[-1])
     return fig
@@ -66,6 +66,6 @@ def plot_pop_avg_all(df, **kwargs):
 def plot_pop_avg_traces_all(df, **kwargs):
     fig, ax = plt.subplots(1, 1, **kwargs)
     for i, row in df.iterrows():
-        plt.plot(row["data"], label=row['rna_name'])
+        plt.plot(row["data"], label=row["rna_name"])
     fig.legend(loc="upper left")
     return fig

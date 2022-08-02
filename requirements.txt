@@ -3,5 +3,3 @@ pandas
 matplotlib
 numpy
 seaborn
-git+https://github.com/jyesselm/dreem.git
-git+https://github.com/YesselmanLab/rna_library.git
