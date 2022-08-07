@@ -36,15 +36,79 @@ def get_avg_noise(df: pd.DataFrame):
     df["avg_noise"] = avgs
 
 
+def get_data_from_motif(m, row, extend):
+    data = row["data"]
+    strands = m.strands()
+    if extend > 0:
+        new_strands = []
+        for s in strands:
+            min_val, max_val = s[0], s[-1]
+            if min_val - extend < 0:
+                raise ValueError("cannot extend motif it will go beyond 0")
+            if max_val + extend > len(data):
+                raise ValueError("cannot extend motif it will go beyond length")
+            r1 = list(range(min_val - extend, min_val))
+            r2 = list(range(max_val + 1, max_val + extend + 1))
+            new_strands.append(r1 + s + r2)
+        strands = new_strands
+
+    sequences = []
+    structures = []
+    data_strands = []
+    for s in strands:
+        data_strand = [round(data[x], 5) for x in s]
+        data_strands.append(data_strand)
+        sequences.append("".join([row["sequence"][x] for x in s]))
+        structures.append("".join([row["structure"][x] for x in s]))
+    return [
+        "&".join(sequences),
+        "&".join(structures),
+        strands,
+        data_strands,
+    ]
+
+
+def get_motifs(row, mtype=None, sequence=None, min_pos=0, max_pos=999):
+    s = rl.SecStruct(row["structure"], row["sequence"].replace("T", "U"))
+    motifs = []
+    for e in s:
+        if mtype is not None and e.type() != mtype:
+            continue
+        if sequence is not None and e.sequence() != sequence:
+            continue
+        strands = e.strands()
+        fail = False
+        for s in strands:
+            if s[-1] > max_pos:
+                fail = True
+            if s[0] < min_pos:
+                fail = True
+        if fail:
+            continue
+        motifs.append(e)
+    return motifs
+
+
+def get_motifs_by_pos(df, mtype, mpos):
+    data = []
+    for i, row in df.iterrows():
+        motifs = get_motifs(row, mtype)
+        if len(motifs) <= mpos:
+            raise ValueError(
+                f"cannot get motif by pos if len is too short {len(motifs)}"
+            )
+        m = motifs[mpos]
+        print(get_data_from_motif(m, row, 0))
+
+
 class MotifExtraction(object):
     def __init__(self):
         pass
 
-    def __get_motifs(self, row, mtype=None, sequence=None, min_pos=0, max_pos=999):
-        try:
-            s = rl.SecStruct(row["structure"], row["sequence"].replace("T", "U"))
-        except:
-            return []
+    def __get_motifs(
+        self, row, mtype=None, sequence=None, min_pos=0, max_pos=999
+    ):
+        s = rl.SecStruct(row["structure"], row["sequence"].replace("T", "U"))
         motifs = []
         for e in s:
             if mtype is not None and e.type() != mtype:
@@ -62,37 +126,6 @@ class MotifExtraction(object):
                 continue
             motifs.append(e)
         return motifs
-
-    def __get_data_from_motif(self, m, row, extend):
-        data = row["data"]
-        strands = m.strands()
-        if extend > 0:
-            new_strands = []
-            for s in strands:
-                min_val, max_val = s[0], s[-1]
-                if min_val - extend < 0:
-                    raise ValueError("cannot extend motif it will go beyond 0")
-                if max_val + extend > len(data):
-                    raise ValueError("cannot extend motif it will go beyond length")
-                r1 = list(range(min_val - extend, min_val))
-                r2 = list(range(max_val + 1, max_val + extend + 1))
-                new_strands.append(r1 + s + r2)
-            strands = new_strands
-
-        sequences = []
-        structures = []
-        data_strands = []
-        for s in strands:
-            data_strand = [round(data[x], 5) for x in s]
-            data_strands.append(data_strand)
-            sequences.append("".join([row["sequence"][x] for x in s]))
-            structures.append("".join([row["structure"][x] for x in s]))
-        return [
-            "&".join(sequences),
-            "&".join(structures),
-            strands,
-            data_strands,
-        ]
 
     def __get_motif_dataframe(
         self,
@@ -121,7 +154,7 @@ class MotifExtraction(object):
             for m in motifs:
                 data = row[df_cols_act].tolist()
                 data.append(name)
-                data.extend(self.__get_data_from_motif(m, row, extend))
+                data.extend(get_data_from_motif(m, row, extend))
                 all_data.append(data)
         return pd.DataFrame(all_data, columns=df_m_cols)
 
@@ -196,7 +229,9 @@ class MotifExtraction(object):
         min_pos: int = 0,
         max_pos: int = 999,
     ):
-        return self.__get_motif_dataframe(df, None, None, name, bp, min_pos, max_pos)
+        return self.__get_motif_dataframe(
+            df, None, None, name, bp, min_pos, max_pos
+        )
 
 
 def get_ref_hp_avg(df, min_pos=0, max_pos=999):
@@ -212,10 +247,15 @@ def get_gaaa_avg(df, min_pos=0, max_pos=999):
     df_gaaa = me.get_hairpin(
         df, "GGAAAC", name="ttr_loop", min_pos=min_pos, max_pos=max_pos
     )
-    return [(row[0][2] + row[0][2] + row[0][3]) / 3 for row in df_gaaa["ttr_loop_data"]]
+    return [
+        (row[0][2] + row[0][2] + row[0][3]) / 3
+        for row in df_gaaa["ttr_loop_data"]
+    ]
 
 
 def get_tlr_first_a(df, min_pos=0, max_pos=999):
     me = MotifExtraction()
-    df_tltlr = me.get_twoway(df, "UAUG&CUAAG", name="tltlr")
+    df_tltlr = me.get_twoway(
+        df, "UAUG&CUAAG", name="tltlr", min_pos=min_pos, max_pos=max_pos
+    )
     return [row[0][1] for row in df_tltlr["tltlr_data"]]

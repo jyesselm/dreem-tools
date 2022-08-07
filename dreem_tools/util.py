@@ -1,11 +1,19 @@
 import numpy as np
 import pandas as pd
 import subprocess
-from dreem import bit_vector
+import pickle
 
 from dreem_tools import logger
 
 log = logger.get_logger("UTIL")
+
+
+def load(pathname):
+    """Safe loader for binary pickle files"""
+    fh = open(pathname, "rb")
+    data = pickle.load(fh)
+    fh.close()
+    return data
 
 
 def run_dreem_from_row(data_dir, seq_path, row):
@@ -37,7 +45,6 @@ def run_dreem_from_row(data_dir, seq_path, row):
     except:
         log.error("command returned errors!")
         return None
-
 
 
 def pop_avg_from_mutation_histo(mh):
