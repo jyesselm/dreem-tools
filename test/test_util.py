@@ -1,5 +1,4 @@
 import os
-import pandas as pd
 import pickle
 
 from dreem_tools import util

@@ -42,6 +42,7 @@ setup(
         'dreem_tools/motif',
         'dreem_tools/plotting',
         'dreem_tools/process',
+        'dreem_tools/parse',
         'dreem_tools/run',
         'dreem_tools/util'
     ],

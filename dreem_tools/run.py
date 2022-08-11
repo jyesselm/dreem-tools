@@ -4,10 +4,9 @@ import glob
 import subprocess
 import shutil
 import os
-import re
-import pickle
+import yaml
 
-from dreem_tools import logger, util
+from dreem_tools import logger, util, parse
 from dreem_tools.util import load
 
 
@@ -60,20 +59,32 @@ def generate_barcode_file(df):
     f.close()
 
 
-
-
 @click.group()
 def cli():
     pass
 
 
-@cli.command()
+@cli.command(help="download a run using bs commandline tool")
 @click.argument("run_name")
-@click.option("-d", "--dir", default="/Users/jyesselm/BaseSpace")
+@click.option(
+    "-d",
+    "--dir",
+    default=None,
+    help="root directory of where data should be downloaded will default to "
+    "$BASESPACE",
+)
 def download(run_name, dir):
+    log = logger.setup_applevel_logger()
+    if dir is None:
+        log.info("-d/--dir was not suppled will use $BASESPACE")
+        if os.getenv("BASESPACE") is None:
+            log.error("$BASESPACE is not set! set it or use -d/--dir")
+        log.info("$BASESPACE -> " + os.getenv("BASESPACE"))
+        dir = os.getenv("BASESPACE")
     os.chdir(dir)
     os.makedirs(run_name, exist_ok=True)
     os.chdir(run_name)
+    log.info(f"running: `bs download project --name {run_name}`")
     os.system(f"bs download project --name {run_name}")
 
 
@@ -84,7 +95,7 @@ def demultiplex(csv, debug):
     """
     demultiplexes paired fastq files given 3' end barcodes
     """
-    log = logger.setup_applevel_logger(file_name='demultplex.log')
+    log = logger.setup_applevel_logger(file_name="demultplex.log")
     log.info("preparing rtb_barcodes.fa file for demultiplexing")
     df = pd.read_csv(csv)
     generate_barcode_file(df)
@@ -122,8 +133,7 @@ def demultiplex(csv, debug):
 @click.argument("seq_path")
 @click.option("--move-plots", is_flag=True)
 def runmulti(csv, data_dir, seq_path, move_plots):
-    # TODO write infomation about the run here
-    log = logger.setup_applevel_logger(file_name='run_multi.log')
+    log = logger.setup_applevel_logger(file_name="run_multi.log")
     log.info("creating processed/ all dreem runs will go here")
     log.info("creating analysis/ all finalized analysis will go here")
     os.makedirs("processed", exist_ok=True)
@@ -160,6 +170,18 @@ def runmulti(csv, data_dir, seq_path, move_plots):
         os.chdir("..")
     df_sum_final = pd.concat(dfs)
     df_sum_final.to_json(f"../analysis/summary.json", orient="records")
+
+
+@cli.command()
+@click.argument("json_file")
+@click.argument("yml_file")
+def parsedata(json_file, yml_file):
+    log = logger.setup_applevel_logger()
+    df = pd.read_json(json_file)
+    f = open(yml_file)
+    params = yaml.load(f, Loader=yaml.FullLoader)
+    parse.parse(df, params)
+    log.info("written results in processed.json")
 
 
 if __name__ == "__main__":

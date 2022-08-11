@@ -22,8 +22,7 @@ def run_dreem_from_row(data_dir, seq_path, row):
     fa = f"{seq_path}/fastas/{row['code']}.fasta"
     db = f"{seq_path}/rna/{row['code']}.csv"
     cmd = (
-        f"dreem -fa {fa} -fq1 {fq1} -fq2 {fq2} --dot_bracket {db}"
-        f" --plot_sequence "
+        f"dreem -fa {fa} -fq1 {fq1} -fq2 {fq2} --dot_bracket {db}" f" --plot_sequence "
     )
     # only if included forcing this was annoying!
     if "align_type" in row:
