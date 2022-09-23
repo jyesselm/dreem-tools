@@ -38,6 +38,7 @@ setup(
     package_dir={'dreem_tools': 'dreem_tools'},
     py_modules=[
         'dreem_tools/dataframe',
+        'dreem_tools/cli',
         'dreem_tools/logger',
         'dreem_tools/motif',
         'dreem_tools/plotting',
@@ -58,7 +59,7 @@ setup(
     ],
     entry_points = {
         'console_scripts' : [
-            'dreem-tools = dreem_tools.run : cli',
+            'dreem-tools = dreem_tools.cli : cli',
         ]
     }
 )

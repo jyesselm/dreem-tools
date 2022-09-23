@@ -135,7 +135,11 @@ def parse_experiment(df, params):
         for pname, mparams in m_params.items():
             all_params = mparams.copy()
             all_params["name"] = pname
-            df = df.merge(parse_motif(df, mparams))
+            df_m = parse_motif(df, mparams)
+            df_m = df_m.drop("name", axis=1)
+            if len(df_m) != len(df):
+                raise ValueError("cannot merge motif dataframe it has too many rows")
+            df = pd.concat([df, df_m], axis=1)
     return df
 
 
@@ -143,6 +147,7 @@ def parse(df, params):
     dfs = []
     for exp_name, g in df.groupby("exp_name"):
         df_sub = pd.DataFrame(g[g["exp_name"] == exp_name])
+        df_sub.reset_index(inplace=True)
         if exp_name in params:
             df_sub = parse_experiment(df_sub, params[exp_name])
         dfs.append(df_sub)

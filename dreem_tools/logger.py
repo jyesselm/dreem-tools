@@ -4,7 +4,9 @@ import sys
 APP_LOGGER_NAME = "dreem-tools"
 
 
-def setup_applevel_logger(logger_name=APP_LOGGER_NAME, is_debug=True, file_name=None):
+def setup_applevel_logger(
+    logger_name=APP_LOGGER_NAME, is_debug=True, file_name=None
+):
     logger = logging.getLogger(logger_name)
     logger.setLevel(logging.DEBUG if is_debug else logging.INFO)
 

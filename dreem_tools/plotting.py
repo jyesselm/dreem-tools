@@ -50,12 +50,12 @@ def plot_pop_avg_diff_from_rows(row1, row2, data_col="data", **kwargs):
     return fig
 
 
-def plot_pop_avg_all(df, **kwargs):
+def plot_pop_avg_all(df, data_col="data", **kwargs):
     fig, axes = plt.subplots(len(df), 1, **kwargs)
     j = 0
     for i, row in df.iterrows():
         colors = colors_for_sequence(row["sequence"])
-        axes[j].bar(range(0, len(row["data"])), row["data"], color=colors)
+        axes[j].bar(range(0, len(row[data_col])), row[data_col], color=colors)
         axes[j].set_title(row["rna_name"])
         j += 1
     plot_pop_avg_from_row(df.iloc[-1], ax=axes[-1])

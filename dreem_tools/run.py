@@ -5,9 +5,13 @@ import subprocess
 import shutil
 import os
 import yaml
+import logging
 
 from dreem_tools import logger, util, parse
 from dreem_tools.util import load
+
+from dreem import logger as dreem_logger
+from dreem import bit_vector
 
 
 def parse_demultiplex_log(lines):
@@ -59,22 +63,8 @@ def generate_barcode_file(df):
     f.close()
 
 
-@click.group()
-def cli():
-    pass
-
-
-@cli.command(help="download a run using bs commandline tool")
-@click.argument("run_name")
-@click.option(
-    "-d",
-    "--dir",
-    default=None,
-    help="root directory of where data should be downloaded will default to "
-    "$BASESPACE",
-)
 def download(run_name, dir):
-    log = logger.setup_applevel_logger()
+    log = logger.get_logger("RUN")
     if dir is None:
         log.info("-d/--dir was not suppled will use $BASESPACE")
         if os.getenv("BASESPACE") is None:
@@ -88,14 +78,11 @@ def download(run_name, dir):
     os.system(f"bs download project --name {run_name}")
 
 
-@cli.command()
-@click.argument("csv")
-@click.option("--debug", is_flag=True)
 def demultiplex(csv, debug):
     """
     demultiplexes paired fastq files given 3' end barcodes
     """
-    log = logger.setup_applevel_logger(file_name="demultplex.log")
+    log = logger.get_logger("RUN")
     log.info("preparing rtb_barcodes.fa file for demultiplexing")
     df = pd.read_csv(csv)
     generate_barcode_file(df)
@@ -127,15 +114,11 @@ def demultiplex(csv, debug):
         shutil.rmtree("NC")
 
 
-@cli.command()
-@click.argument("csv")
-@click.argument("data_dir")
-@click.argument("seq_path")
-@click.option("--move-plots", is_flag=True)
-def runmulti(csv, data_dir, seq_path, move_plots):
-    log = logger.setup_applevel_logger(file_name="run_multi.log")
-    log.info("creating processed/ all dreem runs will go here")
-    log.info("creating analysis/ all finalized analysis will go here")
+def runmulti(csv, data_dir, seq_path, hide_dreem_output):
+    dreem_log = logging.getLogger("dreem")
+    if not hide_dreem_output:
+        dreem_log.addHandler(dreem_logger.get_stream_handler())
+    log = logger.get_logger("RUN")
     os.makedirs("processed", exist_ok=True)
     os.makedirs("analysis", exist_ok=True)
     df = pd.read_csv(csv)
@@ -145,20 +128,27 @@ def runmulti(csv, data_dir, seq_path, move_plots):
     if "type" in df:
         df = df.rename({"type": "data_type"}, axis="columns")
     os.chdir("processed")
-    if move_plots:
-        os.makedirs("plots", exist_ok=True)
     dfs = []
     for i, row in df.iterrows():
         dir_name = row["construct"] + "_" + row["code"] + "_" + row["data_type"]
         os.makedirs(dir_name, exist_ok=True)
         os.chdir(dir_name)
+        fa_path = f"{seq_path}/fastas/{row['code']}.fasta"
+        if not os.path.isfile(fa_path):
+            log.error(f"no fasta for construct: {row['code']}. Skipping!")
+            os.chdir("..")
+            continue
+        fh = dreem_logger.get_file_handler("dreem.log")
+        dreem_log.addHandler(fh)
         util.run_dreem_from_row(data_dir, seq_path, row)
         mhs = None
         try:
             mhs = load("output/BitVector_Files/mutation_histos.p")
         except:
             os.chdir("..")
+            dreem_log.removeHandler(fh)
             continue
+        dreem_log.removeHandler(fh)
         df_sum = util.mutation_histos_to_dataframe(mhs)
         all_cols = list(df.columns)
         all_cols.remove("construct")
@@ -172,11 +162,8 @@ def runmulti(csv, data_dir, seq_path, move_plots):
     df_sum_final.to_json(f"../analysis/summary.json", orient="records")
 
 
-@cli.command()
-@click.argument("json_file")
-@click.argument("yml_file")
 def parsedata(json_file, yml_file):
-    log = logger.setup_applevel_logger()
+    log = logger.get_logger("RUN")
     df = pd.read_json(json_file)
     f = open(yml_file)
     params = yaml.load(f, Loader=yaml.FullLoader)
@@ -184,5 +171,11 @@ def parsedata(json_file, yml_file):
     log.info("written results in processed.json")
 
 
-if __name__ == "__main__":
-    cli()
+def replot(pickle_file):
+    mhs = util.load(pickle_file)
+    os.makedirs("plots", exist_ok=True)
+    for k, mh in mhs.items():
+        print(k, mh.num_reads)
+        util.plot_population_avg(mh, f"plots/{k}_")
+    df = util.mutation_histos_to_dataframe(mhs)
+    df.to_json("summary.json", orient="records")
